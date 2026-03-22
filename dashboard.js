@@ -4,7 +4,7 @@
             confusion matrix, custom predict form
    ═══════════════════════════════════════════════════════════ */
 
-const API_BASE = 'http://localhost:5000';
+const API_BASE = 'https://fraud-sentinal-backend.onrender.com';
 
 // ─── PALETTE ─────────────────────────────────────────────────────────────────
 const MODEL_COLORS = {
