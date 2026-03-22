@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FraudSentinel — Real-Time Fraud Detection System</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Three.js r128 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════ HEADER -->
+<header id="header">
+  <div class="header-inner">
+    <div class="logo-block">
+      <div class="logo-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <polygon points="16,2 30,28 2,28" fill="none" stroke="#00d4ff" stroke-width="2"/>
+          <circle cx="16" cy="20" r="3" fill="#ff4b5c"/>
+          <line x1="16" y1="10" x2="16" y2="16" stroke="#ff4b5c" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">FraudSentinel</span>
+        <span class="logo-sub">Real-Time Fraud Detection System</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-dot" id="apiStatusDot"></div>
+      <span class="status-label" id="apiStatusLabel">Connecting...</span>
+    </div>
+  </div>
+  <div class="header-line"></div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════ MODEL CARDS -->
+<section class="section" id="modelsSection">
+  <div class="section-label">MODEL PERFORMANCE</div>
+  <h2 class="section-title">Detection Engine Overview</h2>
+  <div class="model-cards" id="modelCards">
+    <!-- Populated by JS -->
+    <div class="model-card skeleton"></div>
+    <div class="model-card skeleton"></div>
+    <div class="model-card skeleton"></div>
+    <div class="model-card skeleton"></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ CHARTS ROW -->
+<section class="section" id="chartsSection">
+  <div class="charts-grid">
+    <!-- ROC Curve -->
+    <div class="chart-panel">
+      <div class="chart-header">
+        <div class="chart-title">ROC Curve — All Models</div>
+        <div class="chart-badge">AUC Comparison</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="rocChart"></canvas>
+      </div>
+    </div>
+
+    <!-- PR Curve -->
+    <div class="chart-panel">
+      <div class="chart-header">
+        <div class="chart-title">Precision-Recall Curve</div>
+        <div class="chart-badge">Imbalanced Classes</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="prChart"></canvas>
+      </div>
+      <div class="chart-note">
+        <span class="note-icon">⚡</span>
+        The PR curve is more informative than ROC for imbalanced datasets — it focuses on the minority (fraud) class, where model performance matters most.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ CONFUSION MATRIX -->
+<section class="section" id="confusionSection">
+  <div class="section-label">CONFUSION MATRIX</div>
+  <h2 class="section-title">Classification Breakdown</h2>
+
+  <div class="confusion-layout">
+    <div class="confusion-controls">
+      <label class="select-label">Select Model</label>
+      <div class="custom-select-wrap">
+        <select id="modelSelector" class="model-selector">
+          <option value="logistic_regression">Logistic Regression</option>
+          <option value="svm">SVM</option>
+          <option value="decision_tree">Decision Tree</option>
+          <option value="neural_network">Neural Network</option>
+        </select>
+      </div>
+      <div class="matrix-legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background:#00d4ff22; border:1px solid #00d4ff66;"></div>
+          <span>High count</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background:#ff4b5c22; border:1px solid #ff4b5c66;"></div>
+          <span>Errors</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="confusion-matrix-wrap" id="confusionMatrix">
+      <!-- Populated by JS -->
+      <div class="matrix-loading">Loading matrix...</div>
+    </div>
+
+    <div class="confusion-stats" id="confusionStats">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ SIMULATION -->
+<section class="section simulation-section" id="simulationSection">
+  <div class="section-label">LIVE SIMULATION</div>
+  <h2 class="section-title">Transaction Flow Monitor</h2>
+
+  <div class="simulation-layout">
+    <div class="sim-canvas-wrap" id="simCanvasWrap">
+      <canvas id="simCanvas"></canvas>
+      <div class="sim-overlay-top">
+        <div class="sim-stat" id="simLegitCount">
+          <span class="sim-stat-val">0</span>
+          <span class="sim-stat-label">LEGITIMATE</span>
+        </div>
+        <div class="sim-divider"></div>
+        <div class="sim-stat fraud" id="simFraudCount">
+          <span class="sim-stat-val">0</span>
+          <span class="sim-stat-label">FLAGGED FRAUD</span>
+        </div>
+      </div>
+      <div class="sim-controls">
+        <button class="sim-btn" id="simToggleBtn">⏸ Pause</button>
+        <button class="sim-btn ghost" id="simResetBtn">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="sim-feed-panel" id="simFeedPanel">
+      <div class="feed-header">
+        <span class="feed-title">Live Transaction Feed</span>
+        <span class="feed-badge" id="feedCount">0 transactions</span>
+      </div>
+      <div class="feed-cols">
+        <span>ID</span><span>Amount</span><span>Models</span><span>Status</span>
+      </div>
+      <div class="feed-rows" id="feedRows">
+        <div class="feed-empty">Waiting for transactions...</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ CUSTOM PREDICT -->
+<section class="section" id="predictSection">
+  <div class="section-label">CUSTOM ANALYSIS</div>
+  <h2 class="section-title">Predict a Transaction</h2>
+
+  <div class="predict-layout">
+    <div class="predict-form-panel">
+      <div class="form-group">
+        <label class="form-label">Amount ($) <span id="amountVal" class="form-val">150.00</span></label>
+        <input type="range" class="form-slider" id="inp_amount" min="0" max="5000" step="0.01" value="150">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Time (seconds) <span id="timeVal" class="form-val">43200</span></label>
+        <input type="range" class="form-slider" id="inp_time" min="0" max="172800" step="1" value="43200">
+      </div>
+      <div class="form-group">
+        <label class="form-label">V1 (PCA) <span id="v1Val" class="form-val">0.00</span></label>
+        <input type="range" class="form-slider" id="inp_v1" min="-5" max="5" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">V4 (PCA) <span id="v4Val" class="form-val">0.00</span></label>
+        <input type="range" class="form-slider" id="inp_v4" min="-5" max="5" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">V10 (PCA) <span id="v10Val" class="form-val">0.00</span></label>
+        <input type="range" class="form-slider" id="inp_v10" min="-8" max="8" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">V14 (PCA) <span id="v14Val" class="form-val">0.00</span></label>
+        <input type="range" class="form-slider" id="inp_v14" min="-10" max="10" step="0.01" value="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">V17 (PCA) <span id="v17Val" class="form-val">0.00</span></label>
+        <input type="range" class="form-slider" id="inp_v17" min="-15" max="15" step="0.01" value="0">
+      </div>
+
+      <div class="form-presets">
+        <button class="preset-btn" data-preset="safe">🟢 Load Safe Transaction</button>
+        <button class="preset-btn" data-preset="fraud">🔴 Load Fraud Pattern</button>
+      </div>
+
+      <button class="predict-btn" id="predictBtn">
+        <span class="predict-btn-icon">⚡</span>
+        Analyze Transaction
+      </button>
+    </div>
+
+    <div class="predict-result-panel" id="predictResult">
+      <div class="result-idle">
+        <div class="result-idle-icon">◈</div>
+        <div class="result-idle-text">Configure and run analysis</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════ FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <span class="footer-brand">FraudSentinel v1.0</span>
+    <span class="footer-sep">|</span>
+    <span class="footer-tech">Built with scikit-learn · TensorFlow · Three.js · Chart.js</span>
+    <span class="footer-sep">|</span>
+    <span class="footer-data">ULB Credit Card Fraud Detection Dataset</span>
+  </div>
+</footer>
+
+<script src="dashboard.js"></script>
+<script src="simulation.js"></script>
+
+</body>
+</html>

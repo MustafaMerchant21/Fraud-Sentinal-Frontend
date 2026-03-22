@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FraudSentinel — Real-Time Fraud Detection System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+:root {
+  --bg-base:#050810;--bg-surface:#0a0e1a;--bg-panel:#0d1224;--bg-card:#101628;--bg-input:#141930;
+  --blue:#00d4ff;--blue-dim:#00a8cc;--blue-glow:rgba(0,212,255,.15);--blue-glow2:rgba(0,212,255,.06);
+  --red:#ff4b5c;--red-glow:rgba(255,75,92,.15);--green:#00e896;--green-glow:rgba(0,232,150,.12);
+  --yellow:#ffc93c;--text-primary:#e8eaf2;--text-secondary:#7a8098;--text-muted:#3a4060;
+  --border:rgba(255,255,255,.06);--border-blue:rgba(0,212,255,.2);
+  --radius-sm:6px;--radius-md:12px;--radius-lg:20px;
+  --font-display:'Syne',sans-serif;--font-body:'Outfit',sans-serif;--font-mono:'DM Mono',monospace;
+  --transition:.25s cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg-base);color:var(--text-primary);font-family:var(--font-body);font-size:14px;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.02) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0}
+body>*{position:relative;z-index:1}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--bg-base)}::-webkit-scrollbar-thumb{background:var(--text-muted);border-radius:3px}
+
+/* HEADER */
+#header{position:sticky;top:0;z-index:100;background:rgba(5,8,16,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 40px}
+.header-inner{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo-block{display:flex;align-items:center;gap:14px}
+.logo-icon{display:flex;align-items:center;filter:drop-shadow(0 0 8px rgba(0,212,255,.5))}
+.logo-text{display:flex;flex-direction:column;gap:1px}
+.logo-title{font-family:var(--font-display);font-size:18px;font-weight:800;letter-spacing:.02em;color:#fff}
+.logo-sub{font-size:10px;font-weight:400;letter-spacing:.12em;text-transform:uppercase;color:var(--text-secondary)}
+.header-status{display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;padding:6px 14px}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--yellow);box-shadow:0 0 8px var(--yellow);animation:pulse-dot 2s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.5}}
+.status-label{font-size:11px;font-weight:500;letter-spacing:.08em;color:var(--text-secondary);font-family:var(--font-mono)}
+.header-line{height:2px;background:linear-gradient(90deg,transparent,var(--blue),var(--red),var(--blue),transparent);background-size:200% 100%;animation:hl 4s linear infinite}
+@keyframes hl{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* SECTIONS */
+.section{padding:64px 40px;max-width:1400px;margin:0 auto}
+.section-label{font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.2em;color:var(--blue);text-transform:uppercase;margin-bottom:8px}
+.section-title{font-family:var(--font-display);font-size:28px;font-weight:700;color:var(--text-primary);margin-bottom:40px;letter-spacing:-.01em}
+
+/* MODEL CARDS */
+.model-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.model-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;position:relative;overflow:hidden;transition:transform var(--transition),border-color var(--transition)}
+.model-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--blue-glow2) 0%,transparent 60%);pointer-events:none}
+.model-card:hover{transform:translateY(-3px);border-color:var(--border-blue)}
+.model-card.best{border-color:rgba(0,212,255,.4);box-shadow:0 0 30px rgba(0,212,255,.1),inset 0 0 30px rgba(0,212,255,.03)}
+.model-card.best::after{content:'★ BEST';position:absolute;top:14px;right:14px;font-family:var(--font-mono);font-size:9px;font-weight:500;letter-spacing:.15em;color:var(--blue);background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);border-radius:4px;padding:3px 8px}
+.card-model-name{font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.05em;color:var(--text-secondary);text-transform:uppercase;margin-bottom:20px}
+.card-auc{font-family:var(--font-display);font-size:36px;font-weight:800;color:var(--blue);letter-spacing:-.02em;margin-bottom:4px;line-height:1}
+.card-auc-label{font-size:10px;color:var(--text-secondary);letter-spacing:.15em;text-transform:uppercase;margin-bottom:24px;font-family:var(--font-mono)}
+.card-metrics{display:flex;flex-direction:column;gap:10px}
+.card-metric-row{display:flex;justify-content:space-between;align-items:center}
+.metric-name{font-size:11px;color:var(--text-secondary);font-family:var(--font-mono);letter-spacing:.05em}
+.metric-bar-wrap{display:flex;align-items:center;gap:8px;flex:1;margin:0 12px}
+.metric-bar-track{flex:1;height:3px;background:var(--bg-surface);border-radius:2px;overflow:hidden}
+.metric-bar-fill{height:100%;border-radius:2px;background:var(--blue);width:0;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.metric-bar-fill.recall{background:var(--green)}.metric-bar-fill.f1{background:var(--yellow)}
+.metric-val{font-family:var(--font-mono);font-size:12px;font-weight:500;color:var(--text-primary);min-width:38px;text-align:right}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.chart-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;position:relative}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.chart-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--text-primary)}
+.chart-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);border:1px solid rgba(0,212,255,.25);border-radius:4px;padding:3px 9px}
+.chart-wrap{position:relative;height:320px}
+.chart-note{margin-top:16px;padding:12px 16px;background:rgba(255,196,60,.04);border-left:2px solid var(--yellow);border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:12px;color:var(--text-secondary);line-height:1.5}
+
+/* CONFUSION */
+.confusion-layout{display:grid;grid-template-columns:220px 1fr 240px;gap:32px;align-items:start}
+.select-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-secondary)}
+.custom-select-wrap{position:relative}
+.model-selector{width:100%;background:var(--bg-input);border:1px solid var(--border-blue);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px 14px;font-family:var(--font-body);font-size:13px;cursor:pointer;appearance:none;outline:none;transition:border-color var(--transition)}
+.model-selector:focus{border-color:var(--blue)}.model-selector option{background:var(--bg-panel)}
+.confusion-controls{display:flex;flex-direction:column;gap:16px}
+.matrix-legend{display:flex;flex-direction:column;gap:8px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-secondary)}
+.legend-color{width:16px;height:16px;border-radius:4px}
+.confusion-matrix-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.matrix-axis-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-secondary)}
+.matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:380px}
+.matrix-cell{border-radius:var(--radius-md);padding:28px 20px;text-align:center;border:1px solid transparent;transition:all .5s cubic-bezier(.4,0,.2,1)}
+.matrix-cell-type{font-family:var(--font-mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
+.matrix-cell-value{font-family:var(--font-display);font-size:32px;font-weight:800;line-height:1}
+.matrix-cell-desc{font-size:10px;color:var(--text-secondary);margin-top:4px}
+.matrix-cell.tn{background:rgba(0,212,255,.08);border-color:rgba(0,212,255,.2)}.matrix-cell.tn .matrix-cell-value{color:var(--blue)}.matrix-cell.tn .matrix-cell-type{color:var(--blue)}
+.matrix-cell.fp{background:rgba(255,75,92,.06);border-color:rgba(255,75,92,.15)}.matrix-cell.fp .matrix-cell-value{color:var(--red)}.matrix-cell.fp .matrix-cell-type{color:var(--red)}
+.matrix-cell.fn{background:rgba(255,75,92,.06);border-color:rgba(255,75,92,.15)}.matrix-cell.fn .matrix-cell-value{color:var(--red)}.matrix-cell.fn .matrix-cell-type{color:var(--red)}
+.matrix-cell.tp{background:rgba(0,232,150,.08);border-color:rgba(0,232,150,.2)}.matrix-cell.tp .matrix-cell-value{color:var(--green)}.matrix-cell.tp .matrix-cell-type{color:var(--green)}
+.confusion-stats{display:flex;flex-direction:column;gap:16px;padding-top:8px}
+.cstat-item{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:16px 18px}
+.cstat-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:4px}
+.cstat-value{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--blue)}
+
+/* SIMULATION */
+.simulation-section{max-width:100%;padding:64px 40px}
+.simulation-section .section-title,.simulation-section .section-label{max-width:1400px;margin-left:auto;margin-right:auto}
+.simulation-layout{display:grid;grid-template-columns:1fr 360px;gap:24px;max-width:1400px;margin:0 auto}
+.sim-canvas-wrap{position:relative;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;height:580px}
+#simCanvas{display:block;width:100%;height:100%}
+.sim-overlay-top{position:absolute;top:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:24px;background:rgba(10,14,26,.8);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:30px;padding:10px 28px}
+.sim-stat{text-align:center}
+.sim-stat-val{display:block;font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--blue)}
+.sim-stat.fraud .sim-stat-val{color:var(--red)}
+.sim-stat-label{display:block;font-family:var(--font-mono);font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-secondary);margin-top:2px}
+.sim-divider{width:1px;height:30px;background:var(--border)}
+.sim-controls{position:absolute;bottom:20px;left:20px;display:flex;gap:10px}
+.sim-btn{background:rgba(10,14,26,.8);backdrop-filter:blur(12px);border:1px solid var(--border-blue);border-radius:var(--radius-sm);color:var(--blue);font-family:var(--font-mono);font-size:11px;font-weight:500;letter-spacing:.05em;padding:8px 16px;cursor:pointer;transition:all var(--transition)}
+.sim-btn:hover{background:var(--blue-glow);border-color:var(--blue)}.sim-btn.ghost{color:var(--text-secondary);border-color:var(--border)}.sim-btn.ghost:hover{color:var(--text-primary);border-color:var(--border-blue)}
+
+/* FEED */
+.sim-feed-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;display:flex;flex-direction:column;height:580px}
+.feed-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.feed-title{font-family:var(--font-display);font-size:13px;font-weight:700}
+.feed-badge{font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;color:var(--text-secondary)}
+.feed-cols{display:grid;grid-template-columns:90px 70px 1fr 70px;gap:8px;padding:8px 14px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.feed-rows{flex:1;overflow-y:auto;padding:8px 0}
+.feed-empty{padding:20px;text-align:center;color:var(--text-muted);font-family:var(--font-mono);font-size:11px;letter-spacing:.1em}
+.feed-row{display:grid;grid-template-columns:90px 70px 1fr 70px;gap:8px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.02);align-items:center;animation:feedIn .3s ease;transition:background var(--transition)}
+.feed-row:hover{background:rgba(255,255,255,.02)}.feed-row.fraud-row{background:rgba(255,75,92,.04)}
+@keyframes feedIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+.feed-id{font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-amount{font-family:var(--font-mono);font-size:11px;font-weight:500;color:var(--text-primary)}
+.feed-models{font-size:10px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.feed-status{font-size:11px;font-weight:600;text-align:right}
+.feed-status.legit{color:var(--green)}.feed-status.fraud{color:var(--red)}
+
+/* PREDICT */
+.predict-layout{display:grid;grid-template-columns:400px 1fr;gap:32px}
+.predict-form-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;display:flex;flex-direction:column;gap:20px}
+.form-group{display:flex;flex-direction:column;gap:8px}
+.form-label{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center}
+.form-val{font-weight:500;color:var(--blue);font-size:12px}
+.form-slider{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--bg-surface);border-radius:2px;outline:none;cursor:pointer}
+.form-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--blue);cursor:pointer;box-shadow:0 0 10px rgba(0,212,255,.5);transition:transform var(--transition)}
+.form-slider::-webkit-slider-thumb:hover{transform:scale(1.3)}
+.form-presets{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.preset-btn{background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-secondary);font-family:var(--font-body);font-size:11px;padding:9px 12px;cursor:pointer;transition:all var(--transition);text-align:center}
+.preset-btn:hover{border-color:var(--border-blue);color:var(--text-primary)}
+.predict-btn{background:linear-gradient(135deg,rgba(0,212,255,.1),rgba(0,212,255,.05));border:1px solid rgba(0,212,255,.4);border-radius:var(--radius-md);color:var(--blue);font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:.05em;padding:14px;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;transition:all var(--transition);margin-top:4px}
+.predict-btn:hover{background:linear-gradient(135deg,rgba(0,212,255,.18),rgba(0,212,255,.08));box-shadow:0 0 30px rgba(0,212,255,.15)}
+.predict-result-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;display:flex;flex-direction:column;justify-content:center;min-height:400px}
+.result-idle{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;height:100%;flex:1}
+.result-idle-icon{font-size:48px;color:var(--text-muted);opacity:.5}
+.result-idle-text{font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;color:var(--text-muted);text-transform:uppercase}
+.result-verdict{text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.result-verdict-badge{display:inline-block;font-family:var(--font-display);font-size:28px;font-weight:800;letter-spacing:.1em;padding:8px 28px;border-radius:var(--radius-md)}
+.result-verdict-badge.legit{color:var(--green);background:var(--green-glow);border:1px solid rgba(0,232,150,.3)}
+.result-verdict-badge.fraud{color:var(--red);background:var(--red-glow);border:1px solid rgba(255,75,92,.3);animation:fraud-pulse 1s infinite}
+@keyframes fraud-pulse{0%,100%{box-shadow:0 0 20px rgba(255,75,92,.1)}50%{box-shadow:0 0 40px rgba(255,75,92,.3)}}
+.result-max-prob{margin-top:8px;font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)}
+.result-models{display:flex;flex-direction:column;gap:20px}
+.result-model-row{display:flex;flex-direction:column;gap:8px}
+.result-model-header{display:flex;justify-content:space-between;align-items:center}
+.result-model-name{font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary)}
+.result-model-prob{font-family:var(--font-display);font-size:16px;font-weight:700}
+.result-bar-track{height:8px;background:var(--bg-surface);border-radius:4px;overflow:hidden}
+.result-bar-fill{height:100%;border-radius:4px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.prob-safe{background:var(--green)}.prob-warning{background:var(--yellow)}.prob-danger{background:var(--red);box-shadow:0 0 10px rgba(255,75,92,.4)}
+
+/* FOOTER */
+.footer{border-top:1px solid var(--border);padding:24px 40px;background:var(--bg-panel)}
+.footer-inner{display:flex;align-items:center;justify-content:center;gap:16px;font-size:12px;color:var(--text-muted);font-family:var(--font-mono);letter-spacing:.05em}
+.footer-brand{color:var(--blue);font-weight:500}.footer-sep{color:var(--text-muted);opacity:.4}
+
+/* UTILS */
+.loading-spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.fade-in{animation:fadeIn .5s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:1200px){.model-cards{grid-template-columns:repeat(2,1fr)}.confusion-layout{grid-template-columns:1fr}}
+@media(max-width:900px){.section{padding:40px 20px}.charts-grid{grid-template-columns:1fr}.simulation-layout{grid-template-columns:1fr}.predict-layout{grid-template-columns:1fr}.simulation-section{padding:40px 20px}}
+@media(max-width:600px){.model-cards{grid-template-columns:1fr}.logo-sub{display:none}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="header">
+  <div class="header-inner">
+    <div class="logo-block">
+      <div class="logo-icon">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <polygon points="16,2 30,28 2,28" fill="none" stroke="#00d4ff" stroke-width="2"/>
+          <circle cx="16" cy="20" r="3" fill="#ff4b5c"/>
+          <line x1="16" y1="10" x2="16" y2="16" stroke="#ff4b5c" stroke-width="2"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">FraudSentinel</span>
+        <span class="logo-sub">Real-Time Fraud Detection System</span>
+      </div>
+    </div>
+    <div class="header-status">
+      <div class="status-dot" id="apiStatusDot"></div>
+      <span class="status-label" id="apiStatusLabel">Demo Mode</span>
+    </div>
+  </div>
+  <div class="header-line"></div>
+</header>
+
+<!-- MODEL CARDS -->
+<section class="section">
+  <div class="section-label">MODEL PERFORMANCE</div>
+  <h2 class="section-title">Detection Engine Overview</h2>
+  <div class="model-cards" id="modelCards"></div>
+</section>
+
+<!-- CHARTS -->
+<section class="section">
+  <div class="charts-grid">
+    <div class="chart-panel">
+      <div class="chart-header">
+        <div class="chart-title">ROC Curve — All Models</div>
+        <div class="chart-badge">AUC Comparison</div>
+      </div>
+      <div class="chart-wrap"><canvas id="rocChart"></canvas></div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-header">
+        <div class="chart-title">Precision-Recall Curve</div>
+        <div class="chart-badge">Imbalanced Classes</div>
+      </div>
+      <div class="chart-wrap"><canvas id="prChart"></canvas></div>
+      <div class="chart-note"><span>⚡</span> The PR curve is more informative than ROC for imbalanced datasets — it focuses on the minority (fraud) class, where model performance matters most.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CONFUSION MATRIX -->
+<section class="section">
+  <div class="section-label">CONFUSION MATRIX</div>
+  <h2 class="section-title">Classification Breakdown</h2>
+  <div class="confusion-layout">
+    <div class="confusion-controls">
+      <label class="select-label">Select Model</label>
+      <div class="custom-select-wrap">
+        <select id="modelSelector" class="model-selector">
+          <option value="logistic_regression">Logistic Regression</option>
+          <option value="svm">SVM</option>
+          <option value="decision_tree">Decision Tree</option>
+          <option value="neural_network" selected>Neural Network</option>
+        </select>
+      </div>
+      <div class="matrix-legend">
+        <div class="legend-item"><div class="legend-color" style="background:#00d4ff22;border:1px solid #00d4ff66"></div><span>High count</span></div>
+        <div class="legend-item"><div class="legend-color" style="background:#ff4b5c22;border:1px solid #ff4b5c66"></div><span>Errors</span></div>
+      </div>
+    </div>
+    <div class="confusion-matrix-wrap" id="confusionMatrix"></div>
+    <div class="confusion-stats" id="confusionStats"></div>
+  </div>
+</section>
+
+<!-- SIMULATION -->
+<section class="simulation-section">
+  <div class="section-label">LIVE SIMULATION</div>
+  <h2 class="section-title">Transaction Flow Monitor</h2>
+  <div class="simulation-layout">
+    <div class="sim-canvas-wrap" id="simCanvasWrap">
+      <canvas id="simCanvas"></canvas>
+      <div class="sim-overlay-top">
+        <div class="sim-stat"><span class="sim-stat-val" id="legitVal">0</span><span class="sim-stat-label">LEGITIMATE</span></div>
+        <div class="sim-divider"></div>
+        <div class="sim-stat fraud"><span class="sim-stat-val" id="fraudVal">0</span><span class="sim-stat-label">FLAGGED FRAUD</span></div>
+      </div>
+      <div class="sim-controls">
+        <button class="sim-btn" id="simToggleBtn">⏸ Pause</button>
+        <button class="sim-btn ghost" id="simResetBtn">↺ Reset</button>
+      </div>
+    </div>
+    <div class="sim-feed-panel">
+      <div class="feed-header">
+        <span class="feed-title">Live Transaction Feed</span>
+        <span class="feed-badge" id="feedCount">0 transactions</span>
+      </div>
+      <div class="feed-cols"><span>ID</span><span>Amount</span><span>Models</span><span>Status</span></div>
+      <div class="feed-rows" id="feedRows"><div class="feed-empty">Waiting for transactions...</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PREDICT -->
+<section class="section">
+  <div class="section-label">CUSTOM ANALYSIS</div>
+  <h2 class="section-title">Predict a Transaction</h2>
+  <div class="predict-layout">
+    <div class="predict-form-panel">
+      <div class="form-group"><label class="form-label">Amount ($) <span id="amountVal" class="form-val">$150.00</span></label><input type="range" class="form-slider" id="inp_amount" min="0" max="5000" step="0.01" value="150"></div>
+      <div class="form-group"><label class="form-label">Time (sec) <span id="timeVal" class="form-val">43200</span></label><input type="range" class="form-slider" id="inp_time" min="0" max="172800" step="1" value="43200"></div>
+      <div class="form-group"><label class="form-label">V1 (PCA) <span id="v1Val" class="form-val">0.00</span></label><input type="range" class="form-slider" id="inp_v1" min="-5" max="5" step="0.01" value="0"></div>
+      <div class="form-group"><label class="form-label">V4 (PCA) <span id="v4Val" class="form-val">0.00</span></label><input type="range" class="form-slider" id="inp_v4" min="-5" max="5" step="0.01" value="0"></div>
+      <div class="form-group"><label class="form-label">V10 (PCA) <span id="v10Val" class="form-val">0.00</span></label><input type="range" class="form-slider" id="inp_v10" min="-8" max="8" step="0.01" value="0"></div>
+      <div class="form-group"><label class="form-label">V14 (PCA) <span id="v14Val" class="form-val">0.00</span></label><input type="range" class="form-slider" id="inp_v14" min="-10" max="10" step="0.01" value="0"></div>
+      <div class="form-group"><label class="form-label">V17 (PCA) <span id="v17Val" class="form-val">0.00</span></label><input type="range" class="form-slider" id="inp_v17" min="-15" max="15" step="0.01" value="0"></div>
+      <div class="form-presets">
+        <button class="preset-btn" data-preset="safe">🟢 Safe Transaction</button>
+        <button class="preset-btn" data-preset="fraud">🔴 Fraud Pattern</button>
+      </div>
+      <button class="predict-btn" id="predictBtn"><span>⚡</span> Analyze Transaction</button>
+    </div>
+    <div class="predict-result-panel" id="predictResult">
+      <div class="result-idle"><div class="result-idle-icon">◈</div><div class="result-idle-text">Configure and run analysis</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <span class="footer-brand">FraudSentinel v1.0</span>
+    <span class="footer-sep">|</span>
+    <span class="footer-tech">Built with scikit-learn · TensorFlow · Three.js · Chart.js</span>
+    <span class="footer-sep">|</span>
+    <span class="footer-data">ULB Credit Card Fraud Detection Dataset</span>
+  </div>
+</footer>
+
+<script>
+// ═══ DEMO METRICS DATA ═══
+const DEMO = {
+  best_model: 'Neural Network',
+  models: [
+    { name:'Logistic Regression', accuracy:.9991, precision:.8621, recall:.6735, f1_score:.7561, roc_auc:.9712, avg_precision:.7234,
+      confusion_matrix:[[56851,11],[30,61]],
+      roc_curve:{fpr:[0,.002,.005,.01,.05,.1,.2,.5,1],tpr:[0,.55,.72,.82,.89,.92,.94,.97,1]},
+      pr_curve:{precision:[1,.95,.90,.85,.75,.65,.50,.10],recall:[0,.30,.50,.62,.72,.80,.88,1]}},
+    { name:'SVM', accuracy:.9993, precision:.9024, recall:.7551, f1_score:.8222, roc_auc:.9841, avg_precision:.8102,
+      confusion_matrix:[[56857,5],[22,69]],
+      roc_curve:{fpr:[0,.001,.003,.008,.03,.08,.15,.4,1],tpr:[0,.62,.78,.85,.91,.94,.96,.98,1]},
+      pr_curve:{precision:[1,.97,.93,.90,.82,.72,.56,.10],recall:[0,.35,.55,.68,.77,.84,.91,1]}},
+    { name:'Decision Tree', accuracy:.9987, precision:.7302, recall:.7551, f1_score:.7424, roc_auc:.9201, avg_precision:.6891,
+      confusion_matrix:[[56836,26],[23,68]],
+      roc_curve:{fpr:[0,.003,.007,.015,.06,.12,.25,.55,1],tpr:[0,.48,.65,.75,.83,.88,.91,.95,1]},
+      pr_curve:{precision:[1,.90,.83,.77,.68,.58,.45,.10],recall:[0,.28,.46,.60,.70,.78,.86,1]}},
+    { name:'Neural Network', accuracy:.9994, precision:.9143, recall:.8163, f1_score:.8625, roc_auc:.9912, avg_precision:.8834,
+      confusion_matrix:[[56858,4],[17,74]],
+      roc_curve:{fpr:[0,.0005,.002,.006,.02,.06,.12,.35,1],tpr:[0,.70,.82,.88,.93,.96,.97,.99,1]},
+      pr_curve:{precision:[1,.98,.95,.92,.86,.77,.61,.10],recall:[0,.40,.60,.72,.81,.87,.93,1]}}
+  ]
+};
+
+const CONFUSION_DATA = {
+  logistic_regression:[[56851,11],[30,61]],
+  svm:[[56857,5],[22,69]],
+  decision_tree:[[56836,26],[23,68]],
+  neural_network:[[56858,4],[17,74]]
+};
+
+const MODEL_COLORS = {
+  'Logistic Regression':{line:'#00d4ff',fill:'rgba(0,212,255,.1)'},
+  'SVM':{line:'#ff4b5c',fill:'rgba(255,75,92,.1)'},
+  'Decision Tree':{line:'#ffc93c',fill:'rgba(255,201,60,.1)'},
+  'Neural Network':{line:'#00e896',fill:'rgba(0,232,150,.1)'}
+};
+
+// ═══ COUNT-UP ═══
+function countUp(el, target, dur=1200) {
+  if (!el) return;
+  const s = performance.now();
+  const t = parseFloat(target);
+  const pct = typeof target === 'string' && target.includes('%');
+  function tick(n) {
+    const p = Math.min((n-s)/dur,1), e = 1-Math.pow(1-p,3), c = t*e;
+    el.textContent = pct ? c.toFixed(1)+'%' : c.toFixed(4);
+    if (p<1) requestAnimationFrame(tick); else el.textContent = target;
+  }
+  requestAnimationFrame(tick);
+}
+
+// ═══ MODEL CARDS ═══
+function renderCards() {
+  const c = document.getElementById('modelCards');
+  c.innerHTML = '';
+  DEMO.models.forEach((m,i) => {
+    const isBest = m.name === DEMO.best_model;
+    const card   = document.createElement('div');
+    card.className = 'model-card' + (isBest?' best':'');
+    const metrics = [{k:'Accuracy',v:m.accuracy,cls:'acc'},{k:'Precision',v:m.precision,cls:'prec'},{k:'Recall',v:m.recall,cls:'recall'},{k:'F1 Score',v:m.f1_score,cls:'f1'}];
+    card.innerHTML = `
+      <div class="card-model-name">${m.name}</div>
+      <div class="card-auc" id="auc${i}">0.0000</div>
+      <div class="card-auc-label">ROC-AUC Score</div>
+      <div class="card-metrics">${metrics.map(mt=>`
+        <div class="card-metric-row">
+          <span class="metric-name">${mt.k}</span>
+          <div class="metric-bar-wrap"><div class="metric-bar-track"><div class="metric-bar-fill ${mt.cls}" id="bar${i}${mt.cls}" style="width:0"></div></div></div>
+          <span class="metric-val" id="mv${i}${mt.cls}">0%</span>
+        </div>`).join('')}
+      </div>`;
+    c.appendChild(card);
+    setTimeout(() => {
+      countUp(document.getElementById('auc'+i), m.roc_auc.toFixed(4), 1400);
+      metrics.forEach(mt => {
+        const bar = document.getElementById('bar'+i+mt.cls);
+        const val = document.getElementById('mv'+i+mt.cls);
+        setTimeout(()=>{ if(bar) bar.style.width=(mt.v*100)+'%'; },200);
+        setTimeout(()=>{ countUp(val,(mt.v*100).toFixed(1)+'%',1200); },300);
+      });
+    }, i*120);
+  });
+}
+
+// ═══ CHARTS ═══
+let rocChart=null, prChart=null;
+Chart.defaults.color='#7a8098';
+Chart.defaults.font.family='DM Mono';
+Chart.defaults.font.size=11;
+
+function renderROC() {
+  const ctx = document.getElementById('rocChart').getContext('2d');
+  const datasets = DEMO.models.map(m => {
+    const col = MODEL_COLORS[m.name];
+    return { label:m.name+` (AUC=${m.roc_auc.toFixed(3)})`, data:m.roc_curve.fpr.map((f,i)=>({x:f,y:m.roc_curve.tpr[i]})), borderColor:col.line, backgroundColor:col.fill, borderWidth:2, pointRadius:0, tension:.3, fill:false };
+  });
+  datasets.push({ label:'Random Classifier', data:[{x:0,y:0},{x:1,y:1}], borderColor:'rgba(255,255,255,.2)', borderWidth:1, borderDash:[5,5], pointRadius:0, fill:false });
+  const GC = 'rgba(255,255,255,.04)';
+  rocChart = new Chart(ctx, { type:'line', data:{datasets}, options:{ responsive:true, maintainAspectRatio:false, animation:{duration:1000}, plugins:{ legend:{position:'bottom',labels:{boxWidth:12,padding:12}}, tooltip:{backgroundColor:'#0d1224',borderColor:'rgba(0,212,255,.2)',borderWidth:1} }, scales:{ x:{type:'linear',title:{display:true,text:'False Positive Rate',color:'#7a8098'},min:0,max:1,grid:{color:GC}}, y:{title:{display:true,text:'True Positive Rate',color:'#7a8098'},min:0,max:1,grid:{color:GC}} } } });
+}
+
+function renderPR() {
+  const ctx = document.getElementById('prChart').getContext('2d');
+  const datasets = DEMO.models.map(m => {
+    const col = MODEL_COLORS[m.name];
+    return { label:m.name+` (AP=${m.avg_precision.toFixed(3)})`, data:m.pr_curve.recall.map((r,i)=>({x:r,y:m.pr_curve.precision[i]})), borderColor:col.line, backgroundColor:col.fill, borderWidth:2, pointRadius:0, tension:.3, fill:false };
+  });
+  const GC = 'rgba(255,255,255,.04)';
+  prChart = new Chart(ctx, { type:'line', data:{datasets}, options:{ responsive:true, maintainAspectRatio:false, animation:{duration:1000}, plugins:{ legend:{position:'bottom',labels:{boxWidth:12,padding:12}}, tooltip:{backgroundColor:'#0d1224',borderColor:'rgba(255,75,92,.2)',borderWidth:1} }, scales:{ x:{type:'linear',title:{display:true,text:'Recall',color:'#7a8098'},min:0,max:1,grid:{color:GC}}, y:{title:{display:true,text:'Precision',color:'#7a8098'},min:0,max:1,grid:{color:GC}} } } });
+}
+
+// ═══ CONFUSION MATRIX ═══
+function renderMatrix(key) {
+  const wrap  = document.getElementById('confusionMatrix');
+  const stats = document.getElementById('confusionStats');
+  const [[tn,fp],[fn,tp]] = CONFUSION_DATA[key] || CONFUSION_DATA.neural_network;
+  const total = tn+fp+fn+tp, acc=((tn+tp)/total*100).toFixed(2);
+  wrap.innerHTML = `
+    <div class="matrix-axis-label" style="margin-bottom:8px">Predicted →</div>
+    <div class="matrix-grid fade-in">
+      <div class="matrix-cell tn"><div class="matrix-cell-type">True Negative</div><div class="matrix-cell-value">${tn.toLocaleString()}</div><div class="matrix-cell-desc">Correctly rejected</div></div>
+      <div class="matrix-cell fp"><div class="matrix-cell-type">False Positive</div><div class="matrix-cell-value">${fp.toLocaleString()}</div><div class="matrix-cell-desc">False alarm</div></div>
+      <div class="matrix-cell fn"><div class="matrix-cell-type">False Negative</div><div class="matrix-cell-value">${fn.toLocaleString()}</div><div class="matrix-cell-desc">Missed fraud</div></div>
+      <div class="matrix-cell tp"><div class="matrix-cell-type">True Positive</div><div class="matrix-cell-value">${tp.toLocaleString()}</div><div class="matrix-cell-desc">Caught fraud</div></div>
+    </div>`;
+  const prec = tp/(tp+fp)||0, rec = tp/(tp+fn)||0, f1 = 2*prec*rec/(prec+rec)||0;
+  stats.innerHTML = `
+    <div class="cstat-item"><div class="cstat-label">Accuracy</div><div class="cstat-value">${acc}%</div></div>
+    <div class="cstat-item"><div class="cstat-label">Precision</div><div class="cstat-value" style="color:var(--green)">${(prec*100).toFixed(2)}%</div></div>
+    <div class="cstat-item"><div class="cstat-label">Recall</div><div class="cstat-value" style="color:var(--yellow)">${(rec*100).toFixed(2)}%</div></div>
+    <div class="cstat-item"><div class="cstat-label">F1 Score</div><div class="cstat-value" style="color:var(--red)">${(f1*100).toFixed(2)}%</div></div>
+    <div class="cstat-item"><div class="cstat-label">Total Tested</div><div class="cstat-value" style="color:var(--text-secondary)">${total.toLocaleString()}</div></div>`;
+}
+document.getElementById('modelSelector').addEventListener('change', e => renderMatrix(e.target.value));
+
+// ═══ SLIDER WIRING ═══
+const SLIDERS = [
+  {id:'inp_amount',dispId:'amountVal',fmt:v=>'$'+parseFloat(v).toFixed(2)},
+  {id:'inp_time',  dispId:'timeVal',  fmt:v=>parseInt(v).toLocaleString()+'s'},
+  {id:'inp_v1',    dispId:'v1Val',    fmt:v=>parseFloat(v).toFixed(2)},
+  {id:'inp_v4',    dispId:'v4Val',    fmt:v=>parseFloat(v).toFixed(2)},
+  {id:'inp_v10',   dispId:'v10Val',   fmt:v=>parseFloat(v).toFixed(2)},
+  {id:'inp_v14',   dispId:'v14Val',   fmt:v=>parseFloat(v).toFixed(2)},
+  {id:'inp_v17',   dispId:'v17Val',   fmt:v=>parseFloat(v).toFixed(2)},
+];
+SLIDERS.forEach(({id,dispId,fmt}) => {
+  const inp=document.getElementById(id), disp=document.getElementById(dispId);
+  if (inp && disp) inp.addEventListener('input', ()=>{ disp.textContent=fmt(inp.value); });
+});
+
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', ()=>{
+    const p = btn.dataset.preset;
+    const vals = p==='safe'
+      ? {amount:45,time:86400,v1:1.2,v4:.8,v10:.5,v14:-.3,v17:-.8}
+      : {amount:2350,time:11000,v1:-3.5,v4:4.2,v10:-4.8,v14:-6.1,v17:-8.5};
+    document.getElementById('inp_amount').value=vals.amount;
+    document.getElementById('inp_time').value=vals.time;
+    document.getElementById('inp_v1').value=vals.v1;
+    document.getElementById('inp_v4').value=vals.v4;
+    document.getElementById('inp_v10').value=vals.v10;
+    document.getElementById('inp_v14').value=vals.v14;
+    document.getElementById('inp_v17').value=vals.v17;
+    SLIDERS.forEach(({id,dispId,fmt})=>{ const el=document.getElementById(id),d=document.getElementById(dispId); if(el&&d) d.textContent=fmt(el.value); });
+  });
+});
+
+function getColorCls(p) { return p<.3?'prob-safe':p<.6?'prob-warning':'prob-danger'; }
+function getColorHex(p) { return p<.3?'#00e896':p<.6?'#ffc93c':'#ff4b5c'; }
+
+document.getElementById('predictBtn').addEventListener('click', async ()=>{
+  const btn=document.getElementById('predictBtn'), panel=document.getElementById('predictResult');
+  btn.disabled=true; btn.innerHTML='<span class="loading-spinner"></span> Analyzing...';
+  panel.innerHTML='<div class="result-idle"><div class="loading-spinner"></div><div class="result-idle-text" style="margin-top:16px">Running all models...</div></div>';
+
+  // Try API, fall back to local simulation
+  let data;
+  try {
+    const payload={};
+    for(let i=1;i<=28;i++) payload[`V${i}`]=0;
+    payload.Amount=parseFloat(document.getElementById('inp_amount').value);
+    payload.Time=parseFloat(document.getElementById('inp_time').value);
+    ['v1','v4','v10','v14','v17'].forEach(k=>{ payload['V'+k.slice(1).toUpperCase()||k.slice(1)]=parseFloat(document.getElementById('inp_'+k).value); });
+    payload.V1=parseFloat(document.getElementById('inp_v1').value);
+    payload.V4=parseFloat(document.getElementById('inp_v4').value);
+    payload.V10=parseFloat(document.getElementById('inp_v10').value);
+    payload.V14=parseFloat(document.getElementById('inp_v14').value);
+    payload.V17=parseFloat(document.getElementById('inp_v17').value);
+
+    const r = await fetch('http://localhost:5000/api/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if (r.ok) data = await r.json();
+  } catch {}
+
+  if (!data) {
+    // Local simulation
+    const v14=parseFloat(document.getElementById('inp_v14').value);
+    const v10=parseFloat(document.getElementById('inp_v10').value);
+    const amt=parseFloat(document.getElementById('inp_amount').value);
+    const fraudSignal = (Math.abs(v14)>4?1:0)+(Math.abs(v10)>3?1:0)+(amt>2000?1:0);
+    const base = fraudSignal>=2 ? .65+Math.random()*.3 : .02+Math.random()*.12;
+    const preds = {
+      'Logistic Regression':{probability:Math.min(1,base+(Math.random()-.5)*.2)},
+      'SVM':{probability:Math.min(1,base+(Math.random()-.5)*.15)},
+      'Decision Tree':{probability:Math.min(1,base+(Math.random()-.5)*.25)},
+      'Neural Network':{probability:Math.min(1,base+(Math.random()-.5)*.1)}
+    };
+    Object.values(preds).forEach(p=>{ p.prediction=p.probability>.5?1:0; });
+    const maxP = Math.max(...Object.values(preds).map(p=>p.probability));
+    data = { verdict:maxP>.5?'FRAUD':'LEGITIMATE', max_fraud_probability:maxP, predictions:preds };
+  }
+
+  const isFraud = data.verdict==='FRAUD';
+  const maxPct  = (data.max_fraud_probability*100).toFixed(1);
+  panel.innerHTML = `
+    <div class="result-verdict">
+      <div class="result-verdict-badge ${isFraud?'fraud':'legit'}">${isFraud?'🚨 FRAUD DETECTED':'✅ LEGITIMATE'}</div>
+      <div class="result-max-prob">Maximum fraud probability: <strong>${maxPct}%</strong></div>
+    </div>
+    <div class="result-models">
+      ${Object.entries(data.predictions).map(([name,pred])=>{
+        const p=pred.probability, pct=(p*100).toFixed(1), cc=getColorCls(p), ch=getColorHex(p);
+        return `<div class="result-model-row fade-in"><div class="result-model-header"><span class="result-model-name">${name}</span><span class="result-model-prob" style="color:${ch}">${pct}%</span></div><div class="result-bar-track"><div class="result-bar-fill ${cc}" id="rb_${name.replace(/\s/g,'_')}" style="width:0"></div></div></div>`;
+      }).join('')}
+    </div>`;
+  setTimeout(()=>{ Object.keys(data.predictions).forEach(n=>{ const b=document.getElementById('rb_'+n.replace(/\s/g,'_')); if(b) b.style.width=(data.predictions[n].probability*100)+'%'; }); }, 100);
+
+  btn.disabled=false; btn.innerHTML='<span>⚡</span> Analyze Transaction';
+});
+
+// ═══ THREE.JS SIMULATION ═══
+(function(){
+  const CONFIG={NODE_COUNT:18,ORBIT_RADIUS:8.5,BEAM_SPEED:.018,INTERVAL_MS:2200,STAR_COUNT:600};
+  let scene,camera,renderer,clock,nodes=[],activeBeams=[],explosions=[],simRunning=true,simTimer=null,txn=0,fraud=0,legit=0;
+
+  function init() {
+    const canvas=document.getElementById('simCanvas'), wrap=document.getElementById('simCanvasWrap');
+    if (!canvas||!wrap||typeof THREE==='undefined') return;
+    const W=wrap.clientWidth, H=wrap.clientHeight;
+    renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+    renderer.setSize(W,H); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.setClearColor(0x050810,1);
+    scene=new THREE.Scene(); scene.fog=new THREE.FogExp2(0x050810,.025);
+    camera=new THREE.PerspectiveCamera(60,W/H,.1,200); camera.position.set(0,4,18); camera.lookAt(0,0,0);
+    clock=new THREE.Clock();
+    // Lights
+    scene.add(new THREE.AmbientLight(0x0a1428,1));
+    const bl=new THREE.PointLight(0x00d4ff,1.5,30); bl.position.set(-8,6,4); scene.add(bl);
+    const rl=new THREE.PointLight(0xff4b5c,.8,20); rl.position.set(8,-4,-2); scene.add(rl);
+    // Stars
+    const sg=new THREE.BufferGeometry(), sp=new Float32Array(CONFIG.STAR_COUNT*3);
+    for(let i=0;i<CONFIG.STAR_COUNT;i++){const r=30+Math.random()*70,t=Math.random()*Math.PI*2,p=Math.acos(2*Math.random()-1);sp[i*3]=r*Math.sin(p)*Math.cos(t);sp[i*3+1]=r*Math.sin(p)*Math.sin(t);sp[i*3+2]=r*Math.cos(p);}
+    sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+    const stars=new THREE.Points(sg,new THREE.PointsMaterial({color:0x4488ff,size:.1,transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false}));
+    scene.add(stars);
+    // Grid
+    const gm=new THREE.Mesh(new THREE.PlaneGeometry(40,40,20,20),new THREE.MeshBasicMaterial({color:0x00d4ff,wireframe:true,transparent:true,opacity:.04,depthWrite:false}));
+    gm.rotation.x=-Math.PI/2; gm.position.y=-5; scene.add(gm);
+    // Nodes
+    for(let i=0;i<CONFIG.NODE_COUNT;i++){
+      const g=new THREE.Group();
+      const phi=Math.acos(-1+(2*i)/CONFIG.NODE_COUNT), theta=Math.sqrt(CONFIG.NODE_COUNT*Math.PI)*phi;
+      const r=CONFIG.ORBIT_RADIUS*(.7+Math.random()*.5);
+      g.position.set(r*Math.sin(phi)*Math.cos(theta)+(Math.random()-.5)*2, r*Math.cos(phi)*.5+(Math.random()-.5)*1.5, r*Math.sin(phi)*Math.sin(theta)+(Math.random()-.5)*2);
+      const rad=.18+Math.random()*.2;
+      const mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,16,16),new THREE.MeshStandardMaterial({color:0x00aaff,emissive:0x002244,metalness:.4,roughness:.3}));
+      const halo=new THREE.Mesh(new THREE.SphereGeometry(rad*2.2,8,8),new THREE.MeshBasicMaterial({color:0x0066ff,transparent:true,opacity:.04,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.BackSide}));
+      g.add(mesh); g.add(halo); scene.add(g);
+      nodes.push({g,mesh,halo,rad,phase:Math.random()*Math.PI*2,speed:.3+Math.random()*.5,active:false});
+    }
+    // Static edges
+    for(let i=0;i<nodes.length;i++){for(let c=0;c<2;c++){const j=Math.floor(Math.random()*nodes.length);if(j!==i){const L=new THREE.Line(new THREE.BufferGeometry().setFromPoints([nodes[i].g.position,nodes[j].g.position]),new THREE.LineBasicMaterial({color:0x1a3050,transparent:true,opacity:.3,blending:THREE.AdditiveBlending,depthWrite:false}));scene.add(L);}}}
+    window.addEventListener('resize',()=>{const W=wrap.clientWidth,H=wrap.clientHeight;camera.aspect=W/H;camera.updateProjectionMatrix();renderer.setSize(W,H);});
+    document.getElementById('simToggleBtn').addEventListener('click',()=>{simRunning=!simRunning;document.getElementById('simToggleBtn').textContent=simRunning?'⏸ Pause':'▶ Resume';if(simRunning)schedule();else if(simTimer){clearTimeout(simTimer);simTimer=null;}});
+    document.getElementById('simResetBtn').addEventListener('click',()=>{ activeBeams.forEach(b=>{scene.remove(b.line);scene.remove(b.orb);scene.remove(b.trail);}); activeBeams=[]; fraud=0; legit=0; document.getElementById('fraudVal').textContent='0'; document.getElementById('legitVal').textContent='0'; document.getElementById('feedRows').innerHTML='<div class="feed-empty">Waiting for transactions...</div>'; document.getElementById('feedCount').textContent='0 transactions'; });
+    animate(); schedule();
+  }
+
+  function createBeam(from,to,isF){
+    const col=isF?0xff2233:0x00d4ff;
+    const s=from.g.position.clone(), e=to.g.position.clone();
+    const mid=new THREE.Vector3().addVectors(s,e).multiplyScalar(.5); mid.y+=1.5+Math.random()*2;
+    const curve=new THREE.QuadraticBezierCurve3(s,mid,e), pts=curve.getPoints(60);
+    const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false})); scene.add(line);
+    const orb=new THREE.Mesh(new THREE.SphereGeometry(isF?.14:.10,8,8),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false})); orb.position.copy(s); scene.add(orb);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(isF?.35:.25,8,8),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.12,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.BackSide})); orb.add(glow);
+    const tgeo=new THREE.BufferGeometry(); tgeo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(30*3),3));
+    const trail=new THREE.Points(tgeo,new THREE.PointsMaterial({color:col,size:.06,transparent:true,opacity:.5,blending:THREE.AdditiveBlending,depthWrite:false})); scene.add(trail);
+    activeBeams.push({line,orb,trail,curve,progress:0,isFraud:isF,fromN:from,toN:to,hist:[],done:false});
+    from.mesh.material.color.setHex(col); from.mesh.material.emissive.setHex(isF?0x550011:0x001133);
+  }
+
+  function explode(pos,isF){
+    const col=isF?0xff2233:0x00e896;
+    for(let i=0;i<18;i++){
+      const m=new THREE.Mesh(new THREE.SphereGeometry(.05,4,4),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.9,blending:THREE.AdditiveBlending,depthWrite:false}));
+      m.position.copy(pos); scene.add(m);
+      const sp=.04+Math.random()*.08,t=Math.random()*Math.PI*2,p=Math.random()*Math.PI;
+      const vel=new THREE.Vector3(sp*Math.sin(p)*Math.cos(t),sp*Math.sin(p)*Math.sin(t),sp*Math.cos(p));
+      explosions.push({m,vel,life:1,decay:.03+Math.random()*.02});
+    }
+  }
+
+  async function fire(){
+    if(!simRunning||nodes.length<2) return;
+    const fi=Math.floor(Math.random()*nodes.length); let ti=Math.floor(Math.random()*nodes.length); while(ti===fi) ti=Math.floor(Math.random()*nodes.length);
+    let isF=false, txnData=null;
+    try {
+      const r=await fetch('http://localhost:5000/api/simulate_transaction'); if(r.ok){txnData=await r.json();isF=txnData.verdict==='FRAUD';}
+    } catch { isF=Math.random()<.12; txnData={transaction_id:`TXN-${String(++txn).padStart(6,'0')}`,amount:(10+Math.random()*1000).toFixed(2),verdict:isF?'FRAUD':'LEGITIMATE',flagged_by:isF?['Neural Network']:[]}; }
+    createBeam(nodes[fi],nodes[ti],isF);
+    if(isF) fraud++; else legit++;
+    document.getElementById('fraudVal').textContent=fraud; document.getElementById('legitVal').textContent=legit;
+    // Feed
+    const rows=document.getElementById('feedRows'), counter=document.getElementById('feedCount');
+    const empty=rows.querySelector('.feed-empty'); if(empty) empty.remove();
+    const row=document.createElement('div'); row.className='feed-row'+(isF?' fraud-row':'');
+    const flagged=txnData.flagged_by&&txnData.flagged_by.length>0?txnData.flagged_by.join(', '):(isF?'Neural Net':'—');
+    row.innerHTML=`<div class="feed-id">${txnData.transaction_id}</div><div class="feed-amount">$${parseFloat(txnData.amount).toFixed(2)}</div><div class="feed-models">${flagged}</div><div class="feed-status ${isF?'fraud':'legit'}">${isF?'🚨 FRAUD':'✅ OK'}</div>`;
+    rows.insertBefore(row,rows.firstChild);
+    while(rows.children.length>12) rows.removeChild(rows.lastChild);
+    if(counter) counter.textContent=(fraud+legit)+' transactions';
+  }
+
+  function schedule(){ if(!simRunning) return; simTimer=setTimeout(()=>{fire();schedule();},CONFIG.INTERVAL_MS+(Math.random()-.5)*800); }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    const t=clock.getElapsedTime();
+    camera.position.x=Math.sin(t*.05)*18; camera.position.z=Math.cos(t*.05)*18; camera.position.y=4+Math.sin(t*.08)*2; camera.lookAt(0,0,0);
+    nodes.forEach(n=>{ const p=1+Math.sin(t*n.speed+n.phase)*.08; n.g.scale.setScalar(p); });
+    for(let i=activeBeams.length-1;i>=0;i--){
+      const b=activeBeams[i]; b.progress=Math.min(b.progress+CONFIG.BEAM_SPEED,1);
+      const pt=b.curve.getPointAt(b.progress); b.orb.position.copy(pt);
+      b.hist.unshift(pt.clone()); if(b.hist.length>10) b.hist.pop();
+      const ta=b.trail.geometry.attributes.position.array;
+      for(let j=0;j<10;j++){const src=b.hist[j]||pt;ta[j*3]=src.x;ta[j*3+1]=src.y;ta[j*3+2]=src.z;}
+      b.trail.geometry.attributes.position.needsUpdate=true;
+      b.orb.scale.setScalar(1+Math.sin(t*20)*(b.isFraud?.3:.15));
+      if(b.progress>=1&&!b.done){b.done=true;explode(b.toN.g.position.clone(),b.isFraud);setTimeout(()=>{b.fromN.mesh.material.color.setHex(0x00aaff);b.fromN.mesh.material.emissive.setHex(0x002244);b.toN.mesh.material.color.setHex(0x00aaff);b.toN.mesh.material.emissive.setHex(0x002244);},800);setTimeout(()=>{scene.remove(b.line);scene.remove(b.orb);scene.remove(b.trail);activeBeams.splice(i,1);},400);}
+    }
+    for(let i=explosions.length-1;i>=0;i--){const e=explosions[i];e.life-=e.decay;if(e.life<=0){scene.remove(e.m);explosions.splice(i,1);}else{e.m.position.add(e.vel);e.vel.multiplyScalar(.92);e.m.material.opacity=e.life;}}
+    renderer.render(scene,camera);
+  }
+
+  setTimeout(init, 500);
+})();
+
+// ═══ INIT ═══
+window.addEventListener('DOMContentLoaded', ()=>{
+  renderCards();
+  renderROC();
+  renderPR();
+  renderMatrix('neural_network');
+});
+</script>
+</body>
+</html>
